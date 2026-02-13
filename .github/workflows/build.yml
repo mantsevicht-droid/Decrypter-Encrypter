@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -16,24 +16,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Install Flet
-        run: |
-          pip install flet
+          python-version: '3.10'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Указываем версию, которую просит лог (3.38.7)
-          flutter-version: '3.38.7' 
+          flutter-version: '3.19.0' # Стабильная версия для Flet 0.21.0
           channel: 'stable'
+
+      - name: Install Flet CLI
+        run: |
+          pip install flet==0.21.0
 
       - name: Flet Build APK
         run: |
-          # Добавляем --yes, чтобы пропустить все вопросы (y/n)
+          # Флаг --yes отключает интерактивные вопросы
           flet build apk --verbose --yes
-
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
