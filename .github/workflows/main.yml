@@ -1,20 +1,30 @@
 name: Build Android APK
-on: [push] # Собирать каждый раз, когда ты обновляешь код
+on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4 # Обновлено до v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5 # Обновлено до v5
         with:
-          python-version: '3.10'
-      - name: Install Flet and Build
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
           pip install flet
+          # Для сборки APK в облаке иногда нужны дополнительные пакеты
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk
+
+      - name: Flet Build APK
+        run: |
           flet build apk
+
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # ВОТ ЗДЕСЬ ТЕПЕРЬ v4
         with:
-          name: my-app-apk
+          name: my-crypto-app
           path: build/apk/*.apk
