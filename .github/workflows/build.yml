@@ -30,8 +30,8 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Флаг --yes отключает интерактивные вопросы
-          flet build apk --verbose --yes
+          # Убираем --yes, в 0.21.2 он не нужен и вызывает ошибку
+          flet build apk --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
