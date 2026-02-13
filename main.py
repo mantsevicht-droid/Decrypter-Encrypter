@@ -1,10 +1,11 @@
 import flet as ft
 import hashlib
 
+# Чистая логика без лишних библиотек
 def crypt_logic(text, password, encrypt=True):
-    if not text or not password:
-        return ""
     try:
+        if not text or not password:
+            return ""
         key_hash = hashlib.sha256(password.encode()).hexdigest()
         key_a = int(key_hash[:8], 16)
         result = []
@@ -12,42 +13,59 @@ def crypt_logic(text, password, encrypt=True):
         for i, item in enumerate(items):
             dynamic_key = (key_a + i) & 0xFFFF
             if encrypt:
-                res = ~( ((ord(item) ^ dynamic_key) << 5 | (ord(item) ^ dynamic_key) >> 11) ^ dynamic_key ) & 0xFFFF
+                char_code = ord(item) ^ dynamic_key
+                rol_x = ((char_code << 5) | (char_code >> 11)) & 0xFFFF
+                res = ~(rol_x ^ dynamic_key) & 0xFFFF
                 result.append(str(res))
             else:
                 temp = (~int(item) & 0xFFFF) ^ dynamic_key
-                res = ((temp >> 5) | (temp << 11)) & 0xFFFF ^ dynamic_key
+                ror_x = ((temp >> 5) | (temp << 11)) & 0xFFFF
+                res = ror_x ^ dynamic_key
                 result.append(chr(res))
         return " ".join(result) if encrypt else "".join(result)
-    except:
-        return "Ошибка!"
+    except Exception as ex:
+        return f"Ошибка: {str(ex)}"
 
 def main(page: ft.Page):
-    # Настройки для мобилок
+    # Самые базовые настройки для стабильности на Android
+    page.title = "Crypto"
     page.theme_mode = ft.ThemeMode.DARK
-    page.scroll = ft.ScrollMode.ADAPTIVE
-    page.window_width = 400 # Эмуляция размера
-    
-    input_text = ft.TextField(label="Текст", multiline=True)
-    pass_field = ft.TextField(label="Пароль", password=True, can_reveal_password=True)
-    output_text = ft.TextField(label="Результат", read_only=True, multiline=True)
+    page.padding = 10
+    page.scroll = ft.ScrollMode.AUTO
 
-    def btn_click(e):
-        # Определяем какую кнопку нажали по тексту на ней
-        is_encrypt = e.control.text == "Зашифровать"
-        output_text.value = crypt_logic(input_text.value, pass_field.value, is_encrypt)
+    # Элементы интерфейса
+    txt_input = ft.TextField(label="Ввод", multiline=True, min_lines=2)
+    txt_pass = ft.TextField(label="Пароль", password=True, can_reveal_password=True)
+    txt_output = ft.TextField(label="Результат", read_only=True, multiline=True)
+
+    def handle_click(e):
+        # Логика определения действия по тексту кнопки
+        is_enc = e.control.text == "🔒"
+        txt_output.value = crypt_logic(txt_input.value, txt_pass.value, is_enc)
         page.update()
 
-    # Упрощенная верстка без сложных Row/Column для теста
-    page.add(
-        ft.Text("🛡️ Crypto App", size=25, weight="bold"),
-        input_text,
-        pass_field,
-        ft.ElevatedButton("Зашифровать", on_click=btn_click),
-        ft.ElevatedButton("Расшифровать", on_click=btn_click),
-        output_text
+    # Простейшая верстка: просто список элементов друг под другом
+    content = ft.Column(
+        controls=[
+            ft.Text("🔐 BIT CRYPTO", size=20, weight="bold"),
+            txt_input,
+            txt_pass,
+            ft.Row(
+                controls=[
+                    ft.ElevatedButton("🔒", on_click=handle_click, expand=True),
+                    ft.ElevatedButton("🔓", on_click=handle_click, expand=True),
+                ]
+            ),
+            txt_output,
+        ],
+        tight=True,
+        spacing=15
     )
 
-# ОЧЕНЬ ВАЖНО: для Android убираем лишние аргументы в ft.app
+    # Добавляем всё на страницу
+    page.add(content)
+    page.update()
+
+# Точка входа, обязательная для корректной сборки APK
 if __name__ == "__main__":
     ft.app(target=main)
