@@ -26,7 +26,7 @@ jobs:
 
       - name: Install Flet CLI
         run: |
-          pip install flet==0.21.0
+          pip install flet==0.21.2
 
       - name: Flet Build APK
         run: |
