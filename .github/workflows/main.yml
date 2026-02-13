@@ -25,12 +25,15 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Указываем версию, которую просит лог (3.38.7)
+          flutter-version: '3.38.7' 
           channel: 'stable'
 
       - name: Flet Build APK
         run: |
-          # Принудительно создаем структуру проекта и собираем
-          flet build apk --verbose
+          # Добавляем --yes, чтобы пропустить все вопросы (y/n)
+          flet build apk --verbose --yes
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
