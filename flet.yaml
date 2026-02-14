@@ -1,0 +1,5 @@
+# Настройки для сборщика flet 0.21.2
+android:
+  package_name: "com.timam.pobit_shifr"
+  product_name: "Шифратор"
+  icon: "icon.png"
