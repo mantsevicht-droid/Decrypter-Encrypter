@@ -30,8 +30,8 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Добавляем флаг --icon с указанием твоего файла
-          flet build apk --verbose --icon icon.png
+          # В версии 0.21.2 используем только базовую команду
+          flet build apk --verbose
 
 
       - name: Upload APK
