@@ -1,33 +1,43 @@
 import flet as ft
 import hashlib
+import base64
 
 def crypt_logic(text, password, encrypt=True):
-    # Ограничение: пароль должен быть строго 8 символов
     if len(password) != 8:
         return "Ошибка: Пароль должен быть ровно 8 символов!"
     if not text:
-        return "Введите текст или числа!"
+        return ""
         
     try:
         key_hash = hashlib.sha256(password.encode()).hexdigest()
         key_a = int(key_hash[:8], 16)
-        result = []
-        items = text.split() if not encrypt else list(text)
-        for i, item in enumerate(items):
-            dynamic_key = (key_a + i) & 0xFFFF
-            if encrypt:
-                char_code = ord(item) ^ dynamic_key
+        
+        if encrypt:
+            # Шифруем и пакуем в байты (по 2 байта на символ)
+            binary_data = bytearray()
+            for i, char in enumerate(text):
+                dynamic_key = (key_a + i) & 0xFFFF
+                char_code = ord(char) ^ dynamic_key
                 rol_x = ((char_code << 5) | (char_code >> 11)) & 0xFFFF
                 res = ~(rol_x ^ dynamic_key) & 0xFFFF
-                result.append(str(res))
-            else:
-                temp = (~int(item) & 0xFFFF) ^ dynamic_key
-                ror_x = ((temp >> 5) | (temp << 11)) & 0xFFFF
-                res = ror_x ^ dynamic_key
+                # Разрезаем 16-битное число на два байта
+                binary_data.extend(res.to_bytes(2, 'big'))
+            # Превращаем байты в короткую строку Base64
+            return base64.b64encode(binary_data).decode()
+        else:
+            # Декодируем Base64 обратно в байты
+            binary_data = base64.b64decode(text)
+            result = []
+            for i in range(0, len(binary_data), 2):
+                # Собираем число из двух байт
+                item = int.from_bytes(binary_data[i:i+2], 'big')
+                dynamic_key = (key_a + (i // 2)) & 0xFFFF
+                temp = (~item & 0xFFFF) ^ dynamic_key
+                res = ((temp >> 5) | (temp << 11)) & 0xFFFF ^ dynamic_key
                 result.append(chr(res))
-        return " ".join(result) if encrypt else "".join(result)
-    except Exception as ex:
-        return f"Ошибка данных!"
+            return "".join(result)
+    except:
+        return "Ошибка: Неверный формат данных!"
 
 def main(page: ft.Page):
     page.title = "Побитовый шифратор"
@@ -35,33 +45,12 @@ def main(page: ft.Page):
     page.padding = 20
     page.scroll = ft.ScrollMode.AUTO
 
-    txt_input = ft.TextField(label="Текст или числа", multiline=True, min_lines=2)
-    
-    # Поле пароля с ограничением длины в самом виджете
-    txt_pass = ft.TextField(
-        label="Пароль", 
-        password=True, 
-        can_reveal_password=True,
-        max_length=8, # Визуальное ограничение
-    )
-    
-    # Подсказка маленькими буквами
-    pass_hint = ft.Text(
-        "пароль должен состоять ровно из 8-ми символов", 
-        size=12, 
-        italic=True, 
-        color=ft.colors.GREY_400
-    )
-
+    txt_input = ft.TextField(label="Текст или шифр", multiline=True, min_lines=2)
+    txt_pass = ft.TextField(label="Пароль", password=True, can_reveal_password=True, max_length=8)
+    pass_hint = ft.Text("пароль должен состоять ровно из 8-ми символов", size=12, italic=True, color=ft.colors.GREY_400)
     txt_output = ft.TextField(label="Результат", read_only=True, multiline=True)
 
     def handle_click(e):
-        # Проверка длины пароля перед запуском логики
-        if len(txt_pass.value) != 8:
-            txt_output.value = "Ошибка: Пароль должен быть ровно 8 символов!"
-            page.update()
-            return
-            
         is_enc = "Зашифровать" in e.control.text
         txt_output.value = crypt_logic(txt_input.value, txt_pass.value, is_enc)
         page.update()
@@ -74,27 +63,18 @@ def main(page: ft.Page):
             page.update()
 
     page.add(
-        ft.Column(
-            controls=[
-                ft.Text("🛡️ Побитовый шифратор", size=24, weight="bold"),
-                txt_input,
-                ft.Column([txt_pass, pass_hint], spacing=2), # Группируем пароль и подсказку
-                ft.Row(
-                    controls=[
-                        ft.ElevatedButton("🔒 Зашифровать", on_click=handle_click, expand=True),
-                        ft.ElevatedButton("🔓 Расшифровать", on_click=handle_click, expand=True),
-                    ]
-                ),
-                ft.Divider(),
-                ft.Row([
-                    ft.Text("Результат:", weight="bold"),
-                    ft.IconButton(icon=ft.icons.COPY_ALL, on_click=copy_to_clipboard),
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                txt_output,
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=15
-        )
+        ft.Column([
+            ft.Text("🛡️ Побитовый шифратор", size=24, weight="bold"),
+            txt_input,
+            ft.Column([txt_pass, pass_hint], spacing=2),
+            ft.Row([
+                ft.ElevatedButton("🔒 Зашифровать", on_click=handle_click, expand=True),
+                ft.ElevatedButton("🔓 Расшифровать", on_click=handle_click, expand=True),
+            ]),
+            ft.Divider(),
+            ft.Row([ft.Text("Результат:", weight="bold"), ft.IconButton(icon=ft.icons.COPY_ALL, on_click=copy_to_clipboard)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            txt_output,
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
     )
 
 if __name__ == "__main__":
