@@ -1,40 +1,12 @@
 import flet as ft
 import hashlib
 import base64
-import sqlite3 # База данных
+import sqlite3
 from datetime import datetime
 
-# --- РАБОТА С БАЗОЙ ДАННЫХ ---
-def init_db():
-    conn = sqlite3.connect("access.db")
-    cursor = conn.cursor()
-    # Создаем таблицу, если её нет
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            mode TEXT,
-            input_text TEXT,
-            output_text TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def save_to_db(mode, inp, out):
-    conn = sqlite3.connect("access.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO history (timestamp, mode, input_text, output_text) VALUES (?, ?, ?, ?)",
-        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mode, inp, out)
-    )
-    conn.commit()
-    conn.close()
-
-# --- ЛОГИКА ШИФРОВАНИЯ ---
+# --- ЛОГИКА ШИФРОВАНИЯ (твоя база) ---
 def crypt_logic(text, password, encrypt=True):
-    if len(password) != 8: return "Ошибка: Пароль 8 символов!"
-    if not text: return ""
+    if len(password) != 8: return "Пароль 8 символов!"
     try:
         key_hash = hashlib.sha256(password.encode()).hexdigest()
         key_a = int(key_hash[:8], 16)
@@ -54,43 +26,72 @@ def crypt_logic(text, password, encrypt=True):
                 temp = (~item & 0xFFFF) ^ dk
                 res_chars.append(chr(((temp >> 5) | (temp << 11)) & 0xFFFF ^ dk))
             return "".join(res_chars)
-    except: return "Ошибка данных!"
+    except: return "Ошибка!"
 
-# --- ИНТЕРФЕЙС ---
 def main(page: ft.Page):
-    init_db() # Инициализируем БД при запуске
     page.title = "Побитовый шифратор"
     page.theme_mode = ft.ThemeMode.DARK
-    page.scroll = ft.ScrollMode.AUTO
+    page.scroll = ft.ScrollMode.ADAPTIVE
 
-    txt_in = ft.TextField(label="Текст или шифр", multiline=True)
+    # Поля для шифратора
+    txt_in = ft.TextField(label="Текст", multiline=True)
     txt_ps = ft.TextField(label="Пароль (8 симв.)", password=True, max_length=8)
     txt_out = ft.TextField(label="Результат", read_only=True, multiline=True)
 
-    def handle_action(e):
-        is_enc = "Зашифровать" in e.control.text
-        res = crypt_logic(txt_in.value, txt_ps.value, is_enc)
-        txt_out.value = res
-        
-        # Сохраняем в БД, если нет ошибки
-        if res and "Ошибка" not in res:
-            mode_label = "ЗАШИФРОВКА" if is_enc else "РАСШИФРОВКА"
-            save_to_db(mode_label, txt_in.value, res)
-            
+    # Элементы чата
+    chat_messages = ft.Column(scroll=ft.ScrollMode.ALWAYS, expand=True)
+    new_msg = ft.TextField(hint_text="Зашифрованное сообщение...", expand=True)
+
+    def send_to_chat(e):
+        if new_msg.value and txt_ps.value:
+            # Шифруем сообщение перед отправкой в "эфир"
+            encrypted = crypt_logic(new_msg.value, txt_ps.value, True)
+            chat_messages.controls.append(
+                ft.Text(f"Я: {encrypted}", color="blue")
+            )
+            new_msg.value = ""
+            page.update()
+
+    def on_encrypt_click(e):
+        txt_out.value = crypt_logic(txt_in.value, txt_ps.value, True)
         page.update()
 
-    page.add(
-        ft.Column([
-            ft.Text("🛡️ Побитовый шифратор", size=24, weight="bold"),
-            txt_in, txt_ps,
-            ft.Row([
-                ft.ElevatedButton("🔒 Зашифровать", on_click=handle_action, expand=True),
-                ft.ElevatedButton("🔓 Расшифровать", on_click=handle_action, expand=True),
-            ]),
-            ft.Divider(),
-            txt_out
-        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
+    def on_decrypt_click(e):
+        txt_out.value = crypt_logic(txt_in.value, txt_ps.value, False)
+        page.update()
+
+    # Интерфейс с вкладками
+    t = ft.Tabs(
+        selected_index=0,
+        animation_duration=300,
+        tabs=[
+            ft.Tab(
+                text="Шифратор",
+                icon=ft.icons.LOCK_OPEN,
+                content=ft.Column([
+                    ft.Text("🔐 ИНСТРУМЕНТ", size=20, weight="bold"),
+                    txt_in, txt_ps,
+                    ft.Row([
+                        ft.ElevatedButton("Зашифровать", on_click=on_encrypt_click),
+                        ft.ElevatedButton("Расшифровать", on_click=on_decrypt_click),
+                    ]),
+                    txt_out
+                ], spacing=10, padding=10)
+            ),
+            ft.Tab(
+                text="Чат",
+                icon=ft.icons.CHAT,
+                content=ft.Column([
+                    ft.Text("💬 СЕКРЕТНЫЙ ЭФИР", size=20, weight="bold"),
+                    chat_messages,
+                    ft.Row([new_msg, ft.IconButton(ft.icons.SEND, on_click=send_to_chat)])
+                ], spacing=10, padding=10)
+            ),
+        ],
+        expand=1
     )
+
+    page.add(t)
 
 if __name__ == "__main__":
     ft.app(target=main)
