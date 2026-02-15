@@ -1,82 +1,96 @@
 import flet as ft
 import hashlib
 import base64
+import sqlite3 # База данных
+from datetime import datetime
 
+# --- РАБОТА С БАЗОЙ ДАННЫХ ---
+def init_db():
+    conn = sqlite3.connect("access.db")
+    cursor = conn.cursor()
+    # Создаем таблицу, если её нет
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            mode TEXT,
+            input_text TEXT,
+            output_text TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_to_db(mode, inp, out):
+    conn = sqlite3.connect("access.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO history (timestamp, mode, input_text, output_text) VALUES (?, ?, ?, ?)",
+        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mode, inp, out)
+    )
+    conn.commit()
+    conn.close()
+
+# --- ЛОГИКА ШИФРОВАНИЯ ---
 def crypt_logic(text, password, encrypt=True):
-    if len(password) != 8:
-        return "Ошибка: Пароль должен быть ровно 8 символов!"
-    if not text:
-        return ""
-        
+    if len(password) != 8: return "Ошибка: Пароль 8 символов!"
+    if not text: return ""
     try:
         key_hash = hashlib.sha256(password.encode()).hexdigest()
         key_a = int(key_hash[:8], 16)
-        
         if encrypt:
-            # Шифруем и пакуем в байты (по 2 байта на символ)
             binary_data = bytearray()
             for i, char in enumerate(text):
-                dynamic_key = (key_a + i) & 0xFFFF
-                char_code = ord(char) ^ dynamic_key
-                rol_x = ((char_code << 5) | (char_code >> 11)) & 0xFFFF
-                res = ~(rol_x ^ dynamic_key) & 0xFFFF
-                # Разрезаем 16-битное число на два байта
+                dk = (key_a + i) & 0xFFFF
+                res = ~( ((ord(char) ^ dk) << 5 | (ord(char) ^ dk) >> 11) ^ dk ) & 0xFFFF
                 binary_data.extend(res.to_bytes(2, 'big'))
-            # Превращаем байты в короткую строку Base64
             return base64.b64encode(binary_data).decode()
         else:
-            # Декодируем Base64 обратно в байты
-            binary_data = base64.b64decode(text)
-            result = []
-            for i in range(0, len(binary_data), 2):
-                # Собираем число из двух байт
-                item = int.from_bytes(binary_data[i:i+2], 'big')
-                dynamic_key = (key_a + (i // 2)) & 0xFFFF
-                temp = (~item & 0xFFFF) ^ dynamic_key
-                res = ((temp >> 5) | (temp << 11)) & 0xFFFF ^ dynamic_key
-                result.append(chr(res))
-            return "".join(result)
-    except:
-        return "Ошибка: Неверный формат данных!"
+            data = base64.b64decode(text)
+            res_chars = []
+            for i in range(0, len(data), 2):
+                item = int.from_bytes(data[i:i+2], 'big')
+                dk = (key_a + (i // 2)) & 0xFFFF
+                temp = (~item & 0xFFFF) ^ dk
+                res_chars.append(chr(((temp >> 5) | (temp << 11)) & 0xFFFF ^ dk))
+            return "".join(res_chars)
+    except: return "Ошибка данных!"
 
+# --- ИНТЕРФЕЙС ---
 def main(page: ft.Page):
+    init_db() # Инициализируем БД при запуске
     page.title = "Побитовый шифратор"
     page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 20
     page.scroll = ft.ScrollMode.AUTO
 
-    txt_input = ft.TextField(label="Текст или шифр", multiline=True, min_lines=2)
-    txt_pass = ft.TextField(label="Пароль", password=True, can_reveal_password=True, max_length=8)
-    pass_hint = ft.Text("пароль должен состоять ровно из 8-ми символов", size=12, italic=True, color=ft.colors.GREY_400)
-    txt_output = ft.TextField(label="Результат", read_only=True, multiline=True)
+    txt_in = ft.TextField(label="Текст или шифр", multiline=True)
+    txt_ps = ft.TextField(label="Пароль (8 симв.)", password=True, max_length=8)
+    txt_out = ft.TextField(label="Результат", read_only=True, multiline=True)
 
-    def handle_click(e):
+    def handle_action(e):
         is_enc = "Зашифровать" in e.control.text
-        txt_output.value = crypt_logic(txt_input.value, txt_pass.value, is_enc)
+        res = crypt_logic(txt_in.value, txt_ps.value, is_enc)
+        txt_out.value = res
+        
+        # Сохраняем в БД, если нет ошибки
+        if res and "Ошибка" not in res:
+            mode_label = "ЗАШИФРОВКА" if is_enc else "РАСШИФРОВКА"
+            save_to_db(mode_label, txt_in.value, res)
+            
         page.update()
-
-    def copy_to_clipboard(e):
-        if txt_output.value and "Ошибка" not in txt_output.value:
-            page.set_clipboard(txt_output.value)
-            page.snack_bar = ft.SnackBar(ft.Text("Скопировано!"))
-            page.snack_bar.open = True
-            page.update()
 
     page.add(
         ft.Column([
             ft.Text("🛡️ Побитовый шифратор", size=24, weight="bold"),
-            txt_input,
-            ft.Column([txt_pass, pass_hint], spacing=2),
+            txt_in, txt_ps,
             ft.Row([
-                ft.ElevatedButton("🔒 Зашифровать", on_click=handle_click, expand=True),
-                ft.ElevatedButton("🔓 Расшифровать", on_click=handle_click, expand=True),
+                ft.ElevatedButton("🔒 Зашифровать", on_click=handle_action, expand=True),
+                ft.ElevatedButton("🔓 Расшифровать", on_click=handle_action, expand=True),
             ]),
             ft.Divider(),
-            ft.Row([ft.Text("Результат:", weight="bold"), ft.IconButton(icon=ft.icons.COPY_ALL, on_click=copy_to_clipboard)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            txt_output,
+            txt_out
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
     )
 
 if __name__ == "__main__":
     ft.app(target=main)
-
