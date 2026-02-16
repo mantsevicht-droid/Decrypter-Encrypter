@@ -16,9 +16,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # Именно в кавычках и без патч-версии
+          python-version: '3.11' # Меняем на 3.11
           cache: 'pip'
-          update-environment: true
 
 
       - name: Setup Flutter
@@ -32,12 +31,11 @@ jobs:
           pip install flet==0.21.2
 
       - name: Flet Build APK
+        env:
+          # Указываем Flet использовать уже установленный Python
+          SERIOUS_PYTHON_BIN: python3
         run: |
-          # Принудительно удаляем возможные битые остатки прошлых запусков
-          rm -rf /tmp/hostpython*
-          rm -rf /tmp/cpython*
-          
-          # Запускаем сборку с максимальным логированием
+          pip install flet==0.21.2
           flet build apk --verbose
 
 
