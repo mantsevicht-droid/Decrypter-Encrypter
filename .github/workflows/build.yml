@@ -28,22 +28,16 @@ jobs:
 
       - name: Install Flet CLI
         run: |
+          # Ставим более свежую версию, где исправлены баги распаковки
           pip install flet==0.23.2
 
       - name: Flet Build APK
         run: |
-          pip install flet==0.23.2
-          
-          # 1. Находим, куда flet скачал архив (обычно это /tmp)
-          # 2. Создаем фейковую папку, которую он хочет, на основе системного Python
-          # Это предотвратит запуск внутреннего процесса распаковки
-          
-          export HOST_PYTHON_DIR=$(ls -d /tmp/hostpython3.11_* 2>/dev/null || echo "/tmp/hostpython3.11_FIXED")
-          mkdir -p $HOST_PYTHON_DIR
-          cp -R /opt/hostedtoolcache/Python/3.11.*/x64/* $HOST_PYTHON_DIR/ || true
-          
-          # 3. Запуск сборки с отключенным обновлением дистрибутива
+          # Очищаем tmp перед стартом на всякий случай
+          rm -rf /tmp/hostpython*
+          # Запускаем сборку
           flet build apk --verbose
+
 
 
       - name: Upload APK
