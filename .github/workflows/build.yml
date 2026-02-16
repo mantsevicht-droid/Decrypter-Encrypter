@@ -28,20 +28,23 @@ jobs:
 
       - name: Install Flet CLI
         run: |
-          pip install flet==0.21.2
+          pip install flet==0.23.2
 
       - name: Flet Build APK
         run: |
-          # 1. Сначала ставим flet, чтобы он скачал свой архив, если его нет
-          pip install flet==0.21.2
+          pip install flet==0.23.2
           
-          # 2. Магия: вручную создаем папку и распаковываем архив
-          # Это предотвратит зависание самого flet
-          mkdir -p /tmp/hostpython3.11_OSWBHU
-          tar -xzf /tmp/cpython-3.11.6+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz -C /tmp/hostpython3.11_OSWBHU || true
+          # 1. Находим, куда flet скачал архив (обычно это /tmp)
+          # 2. Создаем фейковую папку, которую он хочет, на основе системного Python
+          # Это предотвратит запуск внутреннего процесса распаковки
           
-          # 3. Запускаем сборку
+          export HOST_PYTHON_DIR=$(ls -d /tmp/hostpython3.11_* 2>/dev/null || echo "/tmp/hostpython3.11_FIXED")
+          mkdir -p $HOST_PYTHON_DIR
+          cp -R /opt/hostedtoolcache/Python/3.11.*/x64/* $HOST_PYTHON_DIR/ || true
+          
+          # 3. Запуск сборки с отключенным обновлением дистрибутива
           flet build apk --verbose
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
