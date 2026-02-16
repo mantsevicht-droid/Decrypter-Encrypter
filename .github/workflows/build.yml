@@ -16,38 +16,25 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Меняем на 3.11
+          python-version: '3.11'
           cache: 'pip'
 
+      - name: Install Dependencies
+        run: |
+          pip install flet==0.23.2 supabase
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Стабильная версия для Flet 0.21.0
+          flutter-version: '3.19.0'
           channel: 'stable'
-
-      - name: Install Flet CLI
-        run: |
-          # Ставим более свежую версию, где исправлены баги распаковки
-          pip install flet==0.23.2
 
       - name: Flet Build APK
         run: |
-          # Очищаем tmp перед стартом на всякий случай
-          rm -rf /tmp/hostpython*
-          # Запускаем сборку
           flet build apk --verbose
-
-
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-crypto-app
+          name: pobit-shifr-app
           path: build/apk/*.apk
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y setuptools
-          
