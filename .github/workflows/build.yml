@@ -17,10 +17,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Install Dependencies
+      - name: Install Build Tools
         run: |
+          pip install --upgrade pip setuptools wheel
           pip install flet==0.23.2 supabase
 
       - name: Setup Flutter
@@ -31,6 +31,7 @@ jobs:
 
       - name: Flet Build APK
         run: |
+          # Убираем ручную очистку tmp, flet сам должен с этим справляться
           flet build apk --verbose
 
       - name: Upload APK
