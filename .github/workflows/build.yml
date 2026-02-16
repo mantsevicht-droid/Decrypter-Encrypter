@@ -31,11 +31,8 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Очистка перед стартом
-          rm -rf build
-          # Принудительно задаем версию 3.10 для сборщика
-          flet build apk --verbose --python-version 3.10
-
+          # Просто чистая команда, настройки она возьмет из flet.yaml
+          flet build apk --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
