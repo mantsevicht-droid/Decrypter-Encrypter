@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10' # МЕНЯЕМ НА 3.10
 
       - name: Install Build Tools
         run: |
@@ -31,7 +31,8 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Убираем ручную очистку tmp, flet сам должен с этим справляться
+          # Принудительная очистка перед запуском
+          rm -rf build
           flet build apk --verbose
 
       - name: Upload APK
