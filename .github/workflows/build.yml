@@ -33,8 +33,13 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Очистка кеша перед сборкой и детальный лог
+          # Принудительно удаляем возможные битые остатки прошлых запусков
+          rm -rf /tmp/hostpython*
+          rm -rf /tmp/cpython*
+          
+          # Запускаем сборку с максимальным логированием
           flet build apk --verbose
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
