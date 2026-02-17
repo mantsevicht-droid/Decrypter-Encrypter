@@ -1,4 +1,3 @@
-# flet.yaml
 android:
   package_name: "com.timam.pobit_shifr"
-  product_name: "Шифратор"
+  product_name: "Pobit Online"
