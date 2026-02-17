@@ -1,3 +1,4 @@
+'''
 import flet as ft
 import hashlib
 import base64
@@ -108,4 +109,5 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
+
 
