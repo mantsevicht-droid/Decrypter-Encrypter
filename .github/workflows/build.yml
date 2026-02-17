@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.9' # Самый стабильный для сборщика
 
       - name: Install Tools
         run: |
@@ -25,10 +25,12 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0' # Специально под Flet 0.21.2
+          flutter-version: '3.16.0'
           channel: 'stable'
 
       - name: Flet Build APK
         run: |
-          # В 0.21.2 эта команда самая надежная
+          # Полная очистка перед стартом
+          rm -rf build
+          rm -rf /tmp/hostpython*
           flet build apk --verbose
