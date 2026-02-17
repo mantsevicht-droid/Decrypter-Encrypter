@@ -30,6 +30,7 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Добавляем принудительное включение пакета supabase
+          # Убираем все флаги, кроме verbose
           flet build apk --verbose
+
 
