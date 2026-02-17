@@ -1,41 +1,18 @@
 import flet as ft
 import hashlib
 import base64
-import sqlite3
+import requests # Легкая библиотека вместо supabase-py
+import threading
+import time
 from datetime import datetime
 
-# --- БАЗА ДАННЫХ (Локальная) ---
-def init_db():
-    conn = sqlite3.connect("access.db")
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            mode TEXT,
-            input_text TEXT,
-            output_text TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# --- КОНФИГУРАЦИЯ SUPABASE ---
+URL = "https://ottnumxrvyerotigrxhk.supabase.co"
+KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90dG51bXhydnllcm90aWdyeGhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNTg5NjcsImV4cCI6MjA4NjczNDk2N30.HV0hqLAsOsSQYIf36_jMu8xOdzUfVwkZCCCDBs1qEYw"
+HEADERS = {"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
 
-def save_to_db(mode, inp, out):
-    try:
-        conn = sqlite3.connect("access.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO history (timestamp, mode, input_text, output_text) VALUES (?, ?, ?, ?)",
-            (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), mode, inp, out)
-        )
-        conn.commit()
-        conn.close()
-    except: pass
-
-# --- ЛОГИКА ШИФРОВАНИЯ ---
 def crypt_logic(text, password, encrypt=True):
-    if len(password) != 8: return "Ошибка: Пароль 8 символов!"
-    if not text: return ""
+    if len(password) != 8: return None
     try:
         key_hash = hashlib.sha256(password.encode()).hexdigest()
         key_a = int(key_hash[:8], 16)
@@ -55,42 +32,60 @@ def crypt_logic(text, password, encrypt=True):
                 temp = (~item & 0xFFFF) ^ dk
                 res_chars.append(chr(((temp >> 5) | (temp << 11)) & 0xFFFF ^ dk))
             return "".join(res_chars)
-    except: return "Ошибка данных!"
+    except: return None
 
-# --- ИНТЕРФЕЙС ---
 def main(page: ft.Page):
-    init_db()
-    page.title = "Pobit Crypt"
     page.theme_mode = ft.ThemeMode.DARK
-    page.window_width = 400
-    page.scroll = ft.ScrollMode.AUTO
+    page.title = "Pobit Online"
+    
+    txt_ps = ft.TextField(label="Ключ (8 симв.)", password=True, max_length=8)
+    chat_list = ft.ListView(expand=True, spacing=10, auto_scroll=True)
+    msg_input = ft.TextField(hint_text="Сообщение...", expand=True)
 
-    txt_in = ft.TextField(label="Введите текст", multiline=True)
-    txt_ps = ft.TextField(label="Пароль (8 симв.)", password=True, max_length=8)
-    txt_out = ft.TextField(label="Результат", read_only=True, multiline=True)
+    def load_messages():
+        try:
+            # Запрос данных через GET
+            params = {"order": "created_at.desc", "limit": "20"}
+            r = requests.get(URL, headers=HEADERS, params=params)
+            if r.status_code == 200:
+                new_controls = []
+                for m in reversed(r.json()):
+                    raw = m['text']
+                    dec = crypt_logic(raw, txt_ps.value, False) if len(txt_ps.value) == 8 else None
+                    new_controls.append(ft.Text(f"🔓 {dec}" if dec else f"🔒 {raw[:15]}..."))
+                chat_list.controls = new_controls
+                page.update()
+        except: pass
 
-    def handle_action(e):
-        is_enc = "Зашифровать" in e.control.text
-        res = crypt_logic(txt_in.value, txt_ps.value, is_enc)
-        txt_out.value = res
-        
-        if res and "Ошибка" not in res:
-            mode_label = "ENC" if is_enc else "DEC"
-            save_to_db(mode_label, txt_in.value, res)
-        page.update()
+    def send_message(e):
+        if msg_input.value and len(txt_ps.value) == 8:
+            enc = crypt_logic(msg_input.value, txt_ps.value, True)
+            if enc:
+                requests.post(URL, headers=HEADERS, json={"text": enc})
+                msg_input.value = ""
+                load_messages()
+
+    # Фоновое обновление
+    def auto_refresh():
+        while True:
+            load_messages()
+            time.sleep(4)
+
+    threading.Thread(target=auto_refresh, daemon=True).start()
 
     page.add(
-        ft.Column([
-            ft.Text("🔐 POBIT SHIFRATOR", size=24, weight="bold"),
-            txt_in, txt_ps,
-            ft.Row([
-                ft.ElevatedButton("🔒 Зашифровать", on_click=handle_action, expand=True),
-                ft.ElevatedButton("🔓 Расшифровать", on_click=handle_action, expand=True),
-            ]),
-            ft.Divider(),
-            ft.Text("Результат:", weight="bold"),
-            txt_out,
-        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15)
+        ft.Tabs(
+            expand=True,
+            tabs=[
+                ft.Tab(text="Шифратор", content=ft.Column([
+                    ft.Text("🔑 НАСТРОЙКИ"), txt_ps
+                ])),
+                ft.Tab(text="Чат", content=ft.Column([
+                    chat_list,
+                    ft.Row([msg_input, ft.IconButton(ft.icons.SEND, on_click=send_message)])
+                ], expand=True))
+            ]
+        )
     )
 
 if __name__ == "__main__":
