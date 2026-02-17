@@ -1,3 +1,0 @@
-flet==0.23.2
-supabase
-httpx
