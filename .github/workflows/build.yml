@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Tools
         run: |
@@ -25,21 +25,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0' # Самая стабильная для Flet 0.23
+          flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Create Flutter Project
+      - name: Flet Build APK
         run: |
-          # Создаем чистую структуру без запуска тяжелой распаковки
-          flet build apk --copy-to build_folder --no-docker
-
-      - name: Build APK via Flutter
-        run: |
-          cd build_folder
-          flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: pobit-shifr-app
-          path: build_folder/build/app/outputs/flutter-apk/app-release.apk
+          # В версии 0.23.2 используем стандартную команду
+          # Но добавляем очистку кеша внутри самого flet
+          flet build apk --verbose
