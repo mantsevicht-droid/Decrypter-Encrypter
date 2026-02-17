@@ -36,3 +36,11 @@ jobs:
           rm -rf /tmp/hostpython*
           # Собираем стандартной командой
           flet build apk --verbose
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pobit-online-app
+          # Этот путь заставит GitHub искать любой .apk во всех подпапках build
+          path: build/**/*.apk 
+
