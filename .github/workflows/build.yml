@@ -30,6 +30,6 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # В версии 0.23.2 используем стандартную команду
-          # Но добавляем очистку кеша внутри самого flet
-          flet build apk --verbose
+          # Добавляем принудительное включение пакета supabase
+          flet build apk --verbose --include-packages supabase postgrest httpx
+
