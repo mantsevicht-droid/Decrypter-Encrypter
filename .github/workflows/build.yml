@@ -16,26 +16,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # МЕНЯЕМ НА 3.10
+          python-version: '3.10'
 
-      - name: Install Build Tools
+      - name: Install Tools
         run: |
-          pip install --upgrade pip setuptools wheel
-          pip install flet==0.23.2 supabase
+          pip install flet==0.21.2 supabase
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.16.0' # Специально под Flet 0.21.2
           channel: 'stable'
 
       - name: Flet Build APK
         run: |
-          # Просто чистая команда, настройки она возьмет из flet.yaml
+          # В 0.21.2 эта команда самая надежная
           flet build apk --verbose
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: pobit-shifr-app
-          path: build/apk/*.apk
