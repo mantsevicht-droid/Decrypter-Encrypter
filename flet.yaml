@@ -2,5 +2,3 @@
 android:
   package_name: "com.timam.pobit_shifr"
   product_name: "Шифратор"
-  icon: "icon.png"
-  python_version: "3.10"  # Добавь эту строку
