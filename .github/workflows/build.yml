@@ -31,5 +31,5 @@ jobs:
       - name: Flet Build APK
         run: |
           # Добавляем принудительное включение пакета supabase
-          flet build apk --verbose --include-packages supabase postgrest httpx
+          flet build apk --verbose
 
