@@ -20,7 +20,8 @@ jobs:
 
       - name: Install Tools
         run: |
-          pip install flet==0.23.2 supabase
+          # Ставим зависимости вручную, чтобы Flet не вис на них
+          pip install flet==0.23.2 requests
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -30,7 +31,8 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Убираем все флаги, кроме verbose
+          # Чистим временные папки перед стартом
+          rm -rf build
+          rm -rf /tmp/hostpython*
+          # Собираем стандартной командой
           flet build apk --verbose
-
-
