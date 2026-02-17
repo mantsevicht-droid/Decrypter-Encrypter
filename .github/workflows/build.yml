@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9' # Самый стабильный для сборщика
+          python-version: '3.10'
 
       - name: Install Tools
         run: |
@@ -30,7 +30,11 @@ jobs:
 
       - name: Flet Build APK
         run: |
-          # Полная очистка перед стартом
+          # ПРИНУДИТЕЛЬНАЯ ОЧИСТКА ВСЕГО
           rm -rf build
           rm -rf /tmp/hostpython*
+          rm -rf /tmp/cpython*
+          
+          # ЗАПУСК С ПЕРЕМЕННОЙ ОКРУЖЕНИЯ
+          export FLET_PYTHON_VERSION=3.10
           flet build apk --verbose
